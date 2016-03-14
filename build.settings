@@ -1,0 +1,89 @@
+settings ={
+ 
+	 plugins = {
+            -- key is the name passed to Lua's 'require()'
+            ["plugin.openssl"] =
+            {
+                -- required
+                publisherId = "com.coronalabs",
+            },  
+			["plugin.zip"] =
+            {
+               publisherId = "com.coronalabs",
+            },
+			["plugin.google.iap.v3"] =
+			{
+				publisherId = "com.coronalabs",
+				supportedPlatforms = { android=true }
+			},
+        },
+
+	orientation =
+        {
+			default = "landscapeLeft",
+			supported =
+			{
+				"landscapeLeft",
+			},
+        },
+	android =
+	{
+		usesPermissions =
+		{
+			"android.permission.INTERNET",
+			"android.permission.ACCESS_FINE_LOCATION",
+			"android.permission.ACCESS_COARSE_LOCATION",
+		},
+		{
+			largeHeap = true
+		},
+	},
+	iphone =
+	{
+		plist =
+		{
+			NSAppTransportSecurity =
+			{
+            NSExceptionDomains =
+            {
+               ["s3-eu-west-1.amazonaws.com/realchartsdata"] =
+				   {
+					  NSIncludesSubdomains = true,
+					  NSThirdPartyExceptionAllowsInsecureHTTPLoads = true
+				   },
+				["realcharts.net"] =
+				   {
+					  NSIncludesSubdomains = true,
+					  NSThirdPartyExceptionAllowsInsecureHTTPLoads = true
+				   },
+				},
+			 },
+		 
+		 -- NEW APP REQUIREMENT BY APPLE
+			-- Don't forget to change the "1.0" to match your actual version!
+			CFBundleShortVersionString = "1.1.3",
+ 
+			CFBundleIconFile = "Icon.png",
+			CFBundleIconFiles =
+            {
+                "Icon.png",
+                "Icon-60.png",
+                "Icon-60@2x.png",
+                "Icon-60@3x.png",
+                "Icon-72.png",  
+                "Icon-72@2x.png",
+                "Icon-76.png",
+                "Icon-76@2x.png",
+            },
+			 UILaunchImages = {
+				{  -- iPad LandscapeLeft
+                    ["UILaunchImageMinimumOSVersion"] = "7.0",
+                    ["UILaunchImageName"] = "Default-Landscape",
+                    ["UILaunchImageOrientation"] = "LandscapeLeft",
+                    ["UILaunchImageSize"] = "{768, 1024}"
+                },
+            },
+			NSLocationWhenInUseUsageDescription = "Location used for tracking your route",
+		},
+	},
+}

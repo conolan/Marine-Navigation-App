@@ -1,0 +1,7 @@
+--change back the location offset
+check location accuracy
+Improve lights data
+allow email track - adjust
+allow waypoint from current loc without track
+
+
