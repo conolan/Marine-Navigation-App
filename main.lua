@@ -21,9 +21,8 @@ dec = require ("decrypt_chart")
 reg = require ("reg")
 
 isBasic=false
-nmView=true
 
-doTrack,doHarbour,doTide,doLight,doNM,doCS,doSC=false,false,false,true,true,false,false
+doTrack,doHarbour,doTide,doLight,doNM,doCS,doSC=false,false,false,true,false,false,false
 -- isDemo=true
 productName="realchart_us"
 versionNum="1.0.8"
@@ -67,19 +66,6 @@ for i=1, 7 do
 	end
 end
 
--- subF={"ir","planning","sc","es","ww","ee","solent"}
--- for i=1, 5 do
-	-- local docs_path = system.pathForFile( "charts", system.DocumentsDirectory )
-	-- local success = lfs.chdir( docs_path )
-	-- local new_folder_path
-	-- local dname = subF[i]
-
-	-- if ( success ) then
-		-- lfs.mkdir( dname )
-		-- new_folder_path = lfs.currentdir() .. "/" .. dname
-	-- end
--- end
-
 local myInstallDate=IO.loadFile("appinstall.txt")
 local myPurchase=IO.loadFile("chartpurchase.txt")	
 local errorInfo=IO.loadFile("data/error.txt")
@@ -91,9 +77,7 @@ ort="V"
 if ortInfo~=nil then ort=ortInfo[1] end
 if myPurchase~=nil then isDemo=false end
 xmlFile=region.."_rc"
-if isDemo then xmlFile=region.."_free" end
--- composer.gotoScene( chartChooseFile)
--- composer.gotoScene( "splashchecklat")
+
 
 	composer.gotoScene( "splash")
 

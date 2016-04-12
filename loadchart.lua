@@ -12,10 +12,8 @@ local background,cName
 local subOn,inputName,waypNum,mainInfogroup
 local deleteWP,waypEdit,getWPText,makeMark,clearLast,cancelWP
 local startWayPoint,checkMark,chartOut,startChart
-local switchday,switchLock,switchTracking,isTide--,isMoveWP
+local switchday,switchLock,switchTracking,isTide,isMoveWP
 local appName = system.getInfo( "appName" )
-local tTimer=0
-avgSpeedList={0,0,0,0,0,0,0,0,0,0}
 
 segDist=0
 MD.multiplier=1
@@ -42,8 +40,6 @@ local onSystem = function( event )
 
     elseif event.type == "applicationSuspend" then
 		IO.saveOverFile("appsuspend.txt",theTime)
-		Runtime:removeEventListener( "location", loc.locationHandler )
-		trackingOn=false
     elseif event.type == "applicationResume" then
         local mySuspentDate=IO.loadFile("appsuspend.txt")
 		local hoursSinceRun=(theTime-mySuspentDate[1])/60/60
@@ -59,30 +55,19 @@ local function myUnhandledErrorListener( event )
 
     local iHandledTheError = true
     if iHandledTheError then
-		-- alert = native.showAlert(  "Handling the unhandled error", event.errorMessage, { "NEXT" } )
-		--doMessage(event.errorMessage)
-		if lastPanel==nil then lastPanel="none" end
-		
-		clearPanel()
-		clearPanel()
-		--IO.uploadError(string.gsub(event.errorMessage,"'",""),lastPanel)
-		--captureScreenError(event.errorMessage)
-		if tideGroup~=nil then display.remove(tideGroup) end
-		local stage = display.getCurrentStage()
-		--emptyGroup(stage)
-		-- for i=start,theGroup.numChildren do
-			display.remove(stage[3])
-		-- end
-		--composer.removeScene("loadchart")
-		composer.gotoScene("reload")
-
+	--alert = native.showAlert(  "Handling the unhandled error", event.errorMessage, { "NEXT" } )
+	--doMessage(event.errorMessage)
+	if lastPanel==nil then lastPanel="none" end
+	IO.uploadError(string.gsub(event.errorMessage,"'",""),lastPanel)
+	--captureScreenError(event.errorMessage)
+	init.initChart(1)
     else
 		alert = native.showAlert(  "Not handling the unhandled error", event.errorMessage, { "NEXT" } )
     end
     return iHandledTheError
 end
 
---Runtime:addEventListener("unhandledError", myUnhandledErrorListener)
+-- if environment ~= "simulator" then Runtime:addEventListener("unhandledError", myUnhandledErrorListener) end
 if errorReporting then Runtime:addEventListener("unhandledError", myUnhandledErrorListener) end
 
 function scene:create( event )	
@@ -92,51 +77,44 @@ function scene:create( event )
 	backRect = display.newRect(leftEdge,topEdge,screenWidth,screenHeight)
 
 	backRect:setFillColor(.7968,.7968,.7968)
+	-- backRect:setFillColor(.6,.6,.6)
 	backRect.anchorX = 0
 	backRect.anchorY = 0
-	backRect.touch = offsetListener
-	backRect:addEventListener( "touch", backRect )
 	screenGroup:insert(backRect)
 	mainInfogroup=ui.getInfoGroup(leftEdge)
 	uiGroup:insert(mainInfogroup)
-	
-	local textOptions={parent=screenGroup, text=productName,x=rightEdge-285,y=5,width=280,height=15, font=native.systemFont,fontSize=12}
-	rcInfo = display.newText(textOptions)
-	rcInfo:setFillColor(0,0,0)
-	rcInfo.alpha=0.6
-	rcInfo.anchorX = 0
-	rcInfo.anchorY = 0
 	
 	locGroup=display.newGroup()
 	local textOptions, behindRect 
 	if (isPhone) then 
 		behindRect = display.newRect(locGroup,165,0,880,130)
-		textOptions={parent=locGroup,text="",x=200,y=0,width=200,height=120,font=native.systemFont,fontSize=48,align="left"}
-		textOptions2={parent=locGroup,text="getting location info",x=400,y=0,width=500,height=120,font=native.systemFont,fontSize=48,align="left"}
+		textOptions={parent=locGroup,text=system.getInfo( "architectureInfo"),x=190,y=0,width=900,height=120,font=native.systemFont,fontSize=48,align="left"}
 	else
-		behindRect= display.newRect(locGroup,165,0,600,90)
-		textOptions={parent=locGroup,text="",x=200,y=10,width=200,height=100,font=native.systemFont,fontSize=30,align="left"}
-		textOptions2={parent=locGroup,text="getting location info",x=400,y=10,width=600,height=100,font=native.systemFont,fontSize=30,align="left"}
-		--targetIcon = display.newImageRect(locGroup, "images/marks/target.png", 40,40 )
-		--targetIcon.x,targetIcon.y=650,30
+		behindRect= display.newRect(locGroup,110,0,880,70)
+		textOptions={parent=locGroup,text=system.getInfo( "architectureInfo"),x=140,y=0,width=500,height=40,font=native.systemFont,fontSize=24,align="left"}
+		textOptions2={parent=locGroup,text="",x=700,y=0,width=400,height=60,font=native.systemFont,fontSize=24,align="left"}
+		targetIcon = display.newImageRect(locGroup, "images/marks/target.png", 40,40 )
+		targetIcon.x,targetIcon.y=650,30
 	end
 	
 	behindRect:setFillColor(1,1,1,0.8)
 	behindRect.anchorX = 0
 	behindRect.anchorY = 0
 	boat = display.newImageRect(locGroup, "images/boatIcon.png", 20,40 )
-	boat.x,boat.y=185,35
+	boat.x,boat.y=125,35
+	if (isPhone) then boat.x,boat.y=180,25 end
 	
 	locInfo = display.newText(textOptions)
 	locInfo:setTextColor(.2,.2,.2,1)
 	locInfo.anchorX = 0
 	locInfo.anchorY = 0
-
-	targetInfo = display.newText(textOptions2)
-	targetInfo:setTextColor(.2,.2,.2,1)
-	targetInfo.anchorX = 0
-	targetInfo.anchorY = 0
-
+	if (not isPhone) then 
+		targetInfo = display.newText(textOptions2)
+		targetInfo:setTextColor(.2,.2,.2,1)
+		targetInfo.anchorX = 0
+		targetInfo.anchorY = 0
+	end
+	--locGroup.alpha=0
 	uiGroup:insert(locGroup)
 		
 	wpInfoGroup=display.newGroup()
@@ -146,6 +124,13 @@ function scene:create( event )
 	behindRect.strokeWidth = 2
 	behindRect.anchorX = 0
 	behindRect.anchorY = 0
+	
+	local textOptions={parent=uiGroup, text="realcharts.net "..productName.." "..versionNum,x=rightEdge-285,y=5,width=280,height=15, font=native.systemFont,fontSize=12}
+	rcInfo = display.newText(textOptions)
+	rcInfo:setFillColor(0,0,0)
+	rcInfo.alpha=0.6
+	rcInfo.anchorX = 0
+	rcInfo.anchorY = 0
 	
 	local textOptions={parent=wpInfoGroup, text="",x=rightEdge-235,y=525,width=220,height=150, font=native.systemFont,fontSize=24, align=center}
 	wpInfo = display.newText(textOptions)
@@ -161,7 +146,7 @@ function scene:create( event )
 	init.initChart(chartPointer)
 	if chartPointer~=1 then chartBackButton.alpha=1 end
 	crossContainer=display.newGroup()
-	local crossH = display.newLine(crossContainer, 512,344,512,424 )
+	local crossH = display.newLine(crossContainer, 512,336,512,416 )
 	crossH:setStrokeColor( 1, 0, 0, 1 )
 	crossH.strokeWidth = 2
 	crossContainer:insert(crossH)
@@ -194,50 +179,26 @@ function scene:create( event )
 	n:setFillColor(0,0,0,0.5)
 	nightGroup:insert(n)
 	nightGroup.alpha=0
-	if environment == "simulator" then
-		-- ui.makeMiniButton(700,680,50,50,"minus","",yMinus)
-		-- ui.makeMiniButton(760,680,50,50,"plus","",yPlus)
-	end
 	return screenGroup	
 	
-end
-
-function yPlus()
-	mapContainer.y=mapContainer.y+1
-	loc.updatePos()
-end
-
-function yMinus()
-	mapContainer.y=mapContainer.y-1
-	loc.updatePos()
 end
 
 function emptyGroup(theGroup,num)
 	local start=num or 1
 	if (theGroup~=nil) and (theGroup.numChildren~=0) then
-		for i=start,theGroup.numChildren do
+		for i=1,theGroup.numChildren do
 			display.remove(theGroup[1])
 		end
 	end
 end
 -- functions on chart
 function chartBack()
-	if isRoute then
-		doMessage("Save or delete route first","",2,3000)
-	-- elseif trackingOn then
-		-- doMessage("Switch tracking off first","",2,3000)
-	else
-		clearPanel()		
-		table.remove(lastChart)
-		chartPointer=lastChart[table.maxn(lastChart)]
-		-- if isRoute then routes.clearRoute() end
-		init.initChart(chartPointer)
-		if chartPointer~=1 then chartBackButton.alpha=1 end		
-	end
-end
-
-function alertRoute()
-	doMessage("Save or delete route first","",2,3000)
+	clearPanel()		
+	table.remove(lastChart)
+	chartPointer=lastChart[table.maxn(lastChart)]
+	if isRoute then routes.clearRoute() end
+	init.initChart(chartPointer)
+	if chartPointer~=1 then chartBackButton.alpha=1 end
 end
 
 function subListener(self,touch)
@@ -245,7 +206,6 @@ function subListener(self,touch)
 -- move to subChart
 	--if (thePanel==nil) then
 		local phase = touch.phase
-	if not(isRoute) then
 		if ( phase == "began" ) then				
 			-- these variables read in submitmarkforpositioning
 			if (newChartPointer==0) then
@@ -261,32 +221,13 @@ function subListener(self,touch)
 		elseif phase=="ended" or phase=="cancelled" then
 			newChartPointer=0
 		end
-	end
 	--end
 	--if (not isRoute) then return true end
 end
 
-function offsetListener(self,touch)
-	local phase = touch.phase
-	if ( phase == "began" ) then				
-		local t = os.date( '*t' )
-		tTimer=os.time( t )
-
-	elseif phase=="ended" then
-		local t = os.date( '*t' )
-
-		if tTimer<os.time( t )-2 then
-			self.alpha=0.5
-			isSetOffset=true
-		else
-			self.alpha=1
-			isSetOffset=false
-		end
-	end
-end
-
 function chartIn()
-	
+	-- chartPointer=newChartPointer
+	-- newChartPointer=0
 	clearPanel()
 	table.insert(lastChart,chartPointer)
 	init.initChart(chartPointer)
@@ -303,6 +244,10 @@ end
 
 function chartIn_co()
 	init.initChart(chartPointer)
+end
+
+function nextChart()
+	
 end
 
 function selectChart()
@@ -329,27 +274,17 @@ function markListener(touch, event)
 			MD.markLong=myWayPoints[markNum][4]
 			routes.addRouteNode(true)
 		end
-	elseif isRoute then
-
-		MD.markLat=myWayPoints[markNum][3]
-		MD.markLong=myWayPoints[markNum][4]
-		routes.addRouteNode(true)
 	elseif (not thePanel) or (canMoveRoute) or (isMoveWP) or (isMoveGT) then
 		currentWP=markNum
 		currentType=myType
-		if (not isRoute) then
+		if (not isRoute) then	
+
 			if (isMoveWP) then -- moving waypoint after created
 				if ( event.phase == "began" ) then
 					startX=event.x
-					startY=event.y						
-					waypGroup[markNum][1][1].xScale,waypGroup[markNum][1][1].yScale=2,2
-					xShift=((event.x-mapContainer.x)/MD.multiplier)-waypGroup[markNum][1][2].x
-					yShift=((event.y-mapContainer.y)/MD.multiplier)-waypGroup[markNum][1][2].y
-					waypGroup[markNum].x=waypGroup[markNum].x+xShift
-					waypGroup[markNum].y=waypGroup[markNum].y+yShift
-
+					startY=event.y			
 				elseif ( event.phase == "moved" ) then
-					local deltaX = event.x - startX
+					local deltaX = event.x - startX	
 					local deltaY = event.y - startY
 					waypGroup[markNum].x=waypGroup[markNum].x+deltaX/MD.multiplier
 					waypGroup[markNum].y=waypGroup[markNum].y+deltaY/MD.multiplier
@@ -358,7 +293,6 @@ function markListener(touch, event)
 					MD.touchX=event.x
 					MD.touchY=event.y
 				elseif ( event.phase == "ended" ) then
-					waypGroup[markNum][1][1].xScale,waypGroup[markNum][1][1].yScale=1,1
 					if isFinger then
 						myTimer=timer.performWithDelay(200,function() transition.to(finger,{time=200,y=event.y+30+30}) end)
 						fTimer=timer.performWithDelay(2000,function() transition.to(finger,{time=200,alpha=0}) end)
@@ -390,8 +324,8 @@ function markListener(touch, event)
 				elseif ( event.phase == "moved" ) then		
 					local deltaX = event.x - startX	
 					local deltaY = event.y - startY
-					-- routeGroup[2][markNum].x=routeGroup[2][markNum].x+deltaX/MD.multiplier
-					-- routeGroup[2][markNum].y=routeGroup[2][markNum].y+deltaY/MD.multiplier
+					routeGroup[2][markNum].x=routeGroup[2][markNum].x+deltaX/MD.multiplier
+					routeGroup[2][markNum].y=routeGroup[2][markNum].y+deltaY/MD.multiplier
 					routeGroup[3][markNum].x=routeGroup[3][markNum].x+deltaX/MD.multiplier
 					routeGroup[3][markNum].y=routeGroup[3][markNum].y+deltaY/MD.multiplier
 					startX=event.x
@@ -403,17 +337,20 @@ function markListener(touch, event)
 			else--initiating waypoint touch options
 			
 				if ( event.phase == "ended" ) then		
-					--clearPanel()					
+					--clearPanel()
+					
 					if (myType=="wp") then--or (myType=="mk") then
 						
 						clearPanel()
-
+						blinkingCircle=waypGroup[markNum][2][2]
+						blinkingCircle.alpha=1
+						transition.blink( blinkingCircle, { time=1000, tag="transTag" } )
+						local myHide = function() waypGroup[markNum][1].alpha=0 end
+						MD.hTime=timer.performWithDelay( shortTimeOut, myHide, 1 )
 						waypEdit(markNum,myType)
 						
-						--checkGroup(waypGroup[markNum])
 						wpInfo.text=waypGroup[markNum][1][2].text
-						wpInfo.text=myWayPoints[markNum][2].."\n"..myWayPoints[markNum][3].."\n"..myWayPoints[markNum][4].."\n"..myWayPoints[markNum][5]
-						wpInfoGroup.alpha=1
+						if (MD.multiplier<1) then wpInfoGroup.alpha=1 else waypGroup[markNum][1].alpha=1 end
 
 					elseif (myType=="rt") then
 						clearPanel()
@@ -422,23 +359,18 @@ function markListener(touch, event)
 						blinkingCircle.alpha=1
 						transition.blink( blinkingCircle, { time=1000, tag="transTag" } )
 						if (markNum==table.maxn(routeTable)) then
-							thePanel=ui.makeNewPanel("routepanel",rightEdge-205,40,200,220,false,"redbutton","Delete\nremoves saved data",routes.clearRoute,"redbutton","Delete node",deleteWP,"bluebutton","Edit\non number pad",editWP,"greenbutton","Extend\nadd nodes to end",routes.extendRoute,"greybutton","cancel",clearPanel)
+							thePanel=ui.makeNewPanel("routepanel",rightEdge-205,140,200,220,false,"redbutton","Delete\nremoves saved data",routes.clearRoute,"redbutton","Delete node",deleteWP,"bluebutton","Edit\non number pad",editWP,"bluebutton","Move nodes\nany route nodes",routes.moveRoute,"greenbutton","Extend\nadd nodes to end",routes.extendRoute,"greybutton","cancel",clearPanel)
 						elseif (markNum==1) then
-							thePanel=ui.makeNewPanel("routepanel",rightEdge-205,40,200,220,false,"redbutton","Delete\nremoves saved data",routes.clearRoute,"redbutton","Delete node",deleteWP,"bluebutton","Edit\non number pad",editWP,"bluebutton","Move nodes\nany route nodes",routes.moveRoute,"greybutton","cancel",clearPanel)
+							thePanel=ui.makeNewPanel("routepanel",rightEdge-205,140,200,220,false,"redbutton","Delete\nremoves saved data",routes.clearRoute,"redbutton","Delete node",deleteWP,"bluebutton","Edit\non number pad",editWP,"bluebutton","Move nodes\nany route nodes",routes.moveRoute,"greybutton","cancel",clearPanel)
 						else
-							thePanel=ui.makeNewPanel("routepanel",rightEdge-205,40,200,220,false,"greenbutton","Insert\nnode astern",routes.addNode,"redbutton","Delete node",deleteWP,"bluebutton","Edit\non number pad",editWP,"bluebutton","Move nodes\nany route nodes",routes.moveRoute,"greybutton","cancel",clearPanel)
+							thePanel=ui.makeNewPanel("routepanel",rightEdge-205,140,200,220,false,"greenbutton","Insert\nnode astern",routes.addNode,"redbutton","Delete node",deleteWP,"bluebutton","Edit\non number pad",editWP,"bluebutton","Move nodes\nany route nodes",routes.moveRoute,"greybutton","cancel",clearPanel)
 						end
 						screenGroup:insert(thePanel)
 						MD.hTime=timer.performWithDelay(longTimeOut,function() clearPanel() end)
-						-- local myHide = function() routeGroup[2][markNum].alpha=0 end
-						-- infoTimer=timer.performWithDelay( shortTimeOut, myHide, 1 )
-						local totLen=0
-						for i=2,#routeTable do -- counting up the length of route
-							totLen=totLen+routeTable[i][3]
-						end
-						wpInfo.text=routeNameTable[1].."."..markNum.."\nSegment: "..routeTable[markNum][3].."nm\nRoute: "..totLen.."nm\n"..routeTable[markNum][1].."\n"..routeTable[markNum][2]
-						-- if (MD.multiplier<1) then wpInfoGroup.alpha=1 else routeGroup[2][markNum].alpha=1 end
-						wpInfoGroup.alpha=1
+						local myHide = function() routeGroup[2][markNum].alpha=0 end
+						infoTimer=timer.performWithDelay( shortTimeOut, myHide, 1 )
+						wpInfo.text=routeNameTable[1].."."..markNum.."\n"..routeTable[markNum][3].."nm\n"..routeTable[markNum][1].."\n"..routeTable[markNum][2]
+						if (MD.multiplier<1) then wpInfoGroup.alpha=1 else routeGroup[2][markNum].alpha=1 end
 					elseif (myType=="hb") then
 						local fileTable = harbourList[markNum]:split(",")	
 						local myNotes=fileTable[3].."\n\nWaypoint: "..fileTable[4].."\n\nCharts: "..fileTable[5].."\n\nRules & Regs\n"..fileTable[6].."\n\nHazards\n"..fileTable[7].."\n\nTides: "..fileTable[8]
@@ -452,7 +384,7 @@ function markListener(touch, event)
 						thePanel=ui.makeReadNotesPanel(110,10,900,600,myNotes,"greenbutton","club website",function() goUrl(theUrl) end,"greybutton","Done",clearPanel)
 						screenGroup:insert(thePanel)
 					elseif (myType=="td") then						
-						local fileTable = myTidePorts[markNum]:split(",")				
+						local fileTable = myTidePorts[markNum]:split(",")						
 						loadTide(event.target.data)
 					elseif (myType=="goto") then
 						blinkingCircle=gotoGroup[2]
@@ -476,7 +408,7 @@ end
 
 function cancelTrans()
 	transition.cancel( "transTag" )
-	if blinkingCircle~=nil then blinkingCircle.alpha=0 end
+	blinkingCircle.alpha=0
 end
 -- waypoints
 function submitMarkForPositioning(mX,mY)
@@ -499,9 +431,9 @@ function submitMarkForPositioning(mX,mY)
 				chartOut=newChartOut
 				-- chartPointer=newChartPointer
 				-- newChartPointer=0
-				thePanel=ui.makeNewPanel("waypoint,mark,route",ui.checkXForPanel(MD.touchX,200,60),ui.checkYForPanel(MD.touchY,-100),200,220,false,"greenbutton","Chart "..newChartNum,chartIn,"bluebutton","Waypoint",startWayPoint,"bluebutton","Start Route",routes.startRoute,"greybutton","cancel",clearPanel)
+				thePanel=ui.makeNewPanel("waypoint,mark,route",ui.checkXForPanel(MD.touchX,200,50),ui.checkYForPanel(MD.touchY,-100),200,220,false,"greenbutton","Move to\nChart "..newChartNum,chartIn,"bluebutton","Waypoint",startWayPoint,"bluebutton","Start Route",routes.startRoute,"greybutton","cancel",clearPanel)
 			else
-				thePanel=ui.makeNewPanel("waypoint,mark,route",ui.checkXForPanel(MD.touchX,200,60),ui.checkYForPanel(MD.touchY,-100),200,220,false,"bluebutton","Waypoint",startWayPoint,"bluebutton","Start Route",routes.startRoute,"greybutton","cancel",clearPanel)
+				thePanel=ui.makeNewPanel("waypoint,mark,route",ui.checkXForPanel(MD.touchX,200,50),ui.checkYForPanel(MD.touchY,-100),200,220,false,"bluebutton","Waypoint",startWayPoint,"bluebutton","Start Route",routes.startRoute,"greybutton","cancel",clearPanel)
 			end
 			screenGroup:insert(thePanel)
 			MD.hTime=timer.performWithDelay(longTimeOut,function() clearPanel() end)
@@ -511,13 +443,12 @@ function submitMarkForPositioning(mX,mY)
 			end
 		end
 	end
-	if newChartPointer~=0 then chartPointer=newChartPointer end
+	if newChartPointer~=o then chartPointer=newChartPointer end
 	newChartPointer=0
 end
 
 function measureDistance()
 	local lDist=0
-	--local lDist=navMaths.getDistance(routeTable[1][1],routeTable[1][2],routeTable[2][1],routeTable[2][2])
 	for i=2,#routeTable do
 		segDist=navMaths.getDistance(routeTable[i-1][1],routeTable[i-1][2],routeTable[i][1],routeTable[i][2])
 		lDist=lDist+segDist
@@ -532,21 +463,9 @@ end
 function enterWPw()
 	clearPanel()
 	getPanelType="pickerPanel" 
-	thePanel=ui.pickerPanelDMM(110,40,690,420,"bluebutton","Submit",getDMM,"greybutton","cancel",clearPanel)
+	thePanel=ui.pickerPanelDMM(110,200,690,420,"bluebutton","Submit",getDMM,"greybutton","cancel",clearPanel)
 	screenGroup:insert(thePanel)
 	return true
-end
-
-function makeWPw()
-	-- Taken from current location
-	MD.markLat,MD.markLong=currentPoint[1],currentPoint[2]
-	if (MD.markLat<MD.topLat) and (MD.markLat>MD.bottomLat) and (MD.markLong>MD.topLong) and (MD.markLong<MD.bottomLong) then
-		doMessage("Placing waypoint","",2,2000)
-		startWayPoint()
-	else
-		doMessage("Cannot place waypoint outside this chart","",2,3000)
-	end
-	
 end
 
 function showmarkerOptions()
@@ -570,15 +489,24 @@ function startWayPoint(markNum,isLoaded,wpName,wpNum,wpType,wNum,tideData)
 --variables passed only needed when loading saved waypoints or making an icon mark
 --startWayPoint(0,true,fileTable[2],i)
 	--waypButton.alpha=1
-	local theDate=os.date("%d%m%Y" )
 	waypGroup.alpha=1
 	waypNum=waypNum+1
-	viewButtons[2]=true
 	markOn=true
 	local theLat=navMaths.getPixelsFromLat(MD.markLat)-MD.mapH/2
 	local theLong=navMaths.getPixelsFromLong(MD.markLong)-MD.mapW/2
 	local newWay=display.newGroup()
-
+	local nodeInfoGroup=display.newGroup()
+	local rect = display.newRoundedRect(nodeInfoGroup,theLong-12,theLat-12, 180,85,5 )
+	rect:setFillColor(1,1,1,0.8)
+	rect.anchorX=0
+	rect.anchorY=0
+	local textOptions={parent=nodeInfoGroup, text=navMaths.dmmStringBreak(MD.markLat,MD.markLong).."\n"..theDate,x=20+theLong,y=theLat-5,width=150,height=80,font=native.systemFont,fontSize=16}
+	local wpText = display.newText(textOptions)
+	wpText:setTextColor(0,0,1)
+	wpText.anchorX = 0
+	wpText.anchorY = 0
+	nodeInfoGroup.alpha=0
+	newWay:insert(nodeInfoGroup)
 	MD.pixY=navMaths.getPixelsFromLat(MD.markLat) --needed because not in saved waypoints
 	MD.pixX=navMaths.getPixelsFromLong(MD.markLong)
 	
@@ -603,6 +531,10 @@ function startWayPoint(markNum,isLoaded,wpName,wpNum,wpType,wNum,tideData)
 		waypGroup:insert(newWay)
 		makeWayPoint(theLat,theLong,MD.markLat,MD.markLong,newWay,wpType,false,0,wpNum)
 
+		if (waypGroup[wpNum][1]~=nil) then
+			waypGroup[wpNum][1][2].text=wpName.."\n"..waypGroup[wpNum][1][2].text-- error nil value
+			waypGroup[wpNum][1].alpha=0
+		end
 	elseif (wpType=="tr") then
 	--loaded track
 
@@ -630,9 +562,8 @@ function startWayPoint(markNum,isLoaded,wpName,wpNum,wpType,wNum,tideData)
 	--loaded tides
 		makeWayPoint(theLat,theLong,MD.markLat,MD.markLong,newWay,wpType,false,0,wNum,tideData)
 		table.insert(tdNameTable,wpName)
-		print(tideGroup[table.maxn(tdNameTable)][1][2].text)
-		--tideGroup[table.maxn(tdNameTable)][1][2].text=wpName.."\n"..tideGroup[table.maxn(tdNameTable)][1][2].text
-		-- tideGroup[wpNum][1].alpha=0
+		tideGroup[table.maxn(tdNameTable)][1][2].text=wpName.."\n"..tideGroup[table.maxn(tdNameTable)][1][2].text
+		tideGroup[wpNum][1].alpha=0
 	end
 	return true
 end
@@ -818,7 +749,6 @@ end
 
 function getWayPointName()
 	--called from startWayPoint
-	local theDate=os.date("%d%m%Y" )
 	if "Win" == system.getInfo( "platformName" ) then
 		inputName=currentType..table.maxn(myWayPoints)+1
 	else
@@ -826,7 +756,7 @@ function getWayPointName()
 	end
 	-- in waypGroup [n][1] is display rect and text.
 	-- waypGroup [n][2] is the dot
-	--waypGroup[waypGroup.numChildren][1][2].text=inputName.."\n"..waypGroup[waypGroup.numChildren][1][2].text
+	waypGroup[waypGroup.numChildren][1][2].text=inputName.."\n"..waypGroup[waypGroup.numChildren][1][2].text
 	--local waypoint=chartNum..","..inputName
 	if (currentType=="wp") then
 		myWayPoints[table.maxn(myWayPoints)][2]=inputName
@@ -847,7 +777,7 @@ end
 function waypEdit(mNum,mType)
 	--called from markListener, used for marks and wp
 	clearPanel()
-	thePanel=ui.makeNewPanel("deletewp",rightEdge-215,40,200,220,false,"redbutton","Delete",deleteWP,"bluebutton","Edit\non number pad",editWP,"bluebutton","Move\ndrag waypoint",moveWP,"bluebutton","Start Route\nfrom waypoint",startRouteWP,"greybutton","cancel",clearPanel)
+	thePanel=ui.makeNewPanel("deletewp",800,140,200,220,false,"redbutton","Delete",deleteWP,"bluebutton","Edit\non number pad",editWP,"bluebutton","Move\ndrag waypoint",moveWP,"bluebutton","Start Route\nfrom waypoint",startRouteWP,"greybutton","cancel",clearPanel)
 	MD.hTime=timer.performWithDelay(longTimeOut,function() clearPanel() end)
 	screenGroup:insert(thePanel)
 	currentWP=mNum
@@ -857,7 +787,7 @@ end
 function moveWP()
 -- when points are moved manually
 	clearPanel()		
-	thePanel=ui.makeNewPanel("movewp",rightEdge-215,140,200,220,false,"greenbutton","Accept\nchange is kept",reposWP,"greybutton","cancel",cancelMove)
+	thePanel=ui.makeNewPanel("movewp",800,140,200,220,false,"greenbutton","Accept\nchange is kept",reposWP,"greybutton","cancel",cancelMove)
 	screenGroup:insert(thePanel)
 	doMessage("Click the waypoint and drag it to a new position","",2,3000) 
 	if (currentType=="goto") then
@@ -873,14 +803,12 @@ function moveWP()
 end
 
 function reposWP()
-	local myMessage,pixX,pixY
-	local theDate=os.date("%d%m%Y" )
+	local myMessage
 	-- Moves moved point and updates tables to reflect new coordinates
-	pixX=MD.mapW/2+MD.touchX/MD.multiplier-mapContainer.x/MD.multiplier
-	pixY=MD.mapH/2+MD.touchY/MD.multiplier-mapContainer.y/MD.multiplier
+	local pixX=MD.mapW/2+MD.touchX/MD.multiplier-mapContainer.x/MD.multiplier
+	local pixY=MD.mapH/2+MD.touchY/MD.multiplier-mapContainer.y/MD.multiplier
 	local newLong=navMaths.makeNumD(navMaths.getLongFromPixels(pixX),4)
 	local newLat=navMaths.makeNumD(navMaths.getLatFromPixels(pixY),4)
-
 	-- MD.touchX,MD.touchY=0,0
 	if (isMoveWP) then 
 		isMoveWP=false
@@ -908,8 +836,8 @@ function reposWP()
 	
 	if (canMoveRoute) then
 		canMoveRoute=false
-		routePix[currentWP][1]=pixX
-		routePix[currentWP][2]=pixY
+		routePix[currentWP][1]=MD.pixX
+		routePix[currentWP][2]=MD.pixY
 		routeTable[currentWP][1]=newLat
 		routeTable[currentWP][2]=newLong
 		routes.redrawRoute()
@@ -917,7 +845,7 @@ function reposWP()
 		myMessage="Route node moved to new position"
 	end
 	clearPanel()
-	doMessage(myMessage,"For greater accuracy use 'Edit on number pad' option",3,5000)
+	doMessage(myMessage,"",2,3000)
 end
 
 function cancelMove()
@@ -927,13 +855,12 @@ function cancelMove()
 		waypGroup[currentWP].x=MD.oldX
 		waypGroup[currentWP].y=MD.oldY
 	elseif (canMoveRoute) then 
-		-- routeGroup[2][currentWP].x=MD.oldX
-		-- routeGroup[2][currentWP].y=MD.oldY
+		routeGroup[2][currentWP].x=MD.oldX
+		routeGroup[2][currentWP].y=MD.oldY
 		routeGroup[3][currentWP].x=MD.oldX
 		routeGroup[3][currentWP].y=MD.oldY
 		canMoveRoute=false
 		routes.redrawRoute()
-		routes.updateTheRoute()
 	elseif (isMoveGT) then 
 		gotoGroup[1].x=MD.oldX
 		gotoGroup[1].y=MD.oldY
@@ -953,7 +880,7 @@ function deleteWP()
 	if (currentType=="wp") then--or (currentType=="mk") then
 		local numWP=table.maxn(myWayPoints)
 		for i=currentWP+1,numWP do
-			waypGroup[i][1][2].num=i-1
+			waypGroup[i][2][2].num=i-1
 		end		
 		if (numWP==1) then
 			myWayPoints={}
@@ -976,13 +903,13 @@ function deleteWP()
 			table.remove(routePix,currentWP)
 		end
 		routes.redrawRoute()
-		routes.updateTheRoute()
 	elseif (currentType=="goto") then
 		emptyGroup(gotoGroup)
 	end
 	
 	if (waypGroup.numChildren==0) then 
-		viewButtons[2]=false
+		--waypButton.alpha=0.4
+		--waypGroup.alpha=0
 	end
 	clearPanel()
 	wpInfoGroup.alpha=0
@@ -995,7 +922,6 @@ function deleteAllWP()
 	IO.deleteWPFile()
 	emptyGroup(waypGroup)
 	clearPanel()
-	viewButtons[2]=false
 end
 
 function startRouteWP()
@@ -1043,8 +969,6 @@ function updateWP()
 		routeTable[currentWP][1]=newLat
 		routeTable[currentWP][2]=newLong
 		--routeGroup[routePos][1].alpha=0
-		
-		routes.redrawRoute()
 		routes.updateTheRoute()
 		routes.redrawRoute()
 	elseif (currentType=="mk") then
@@ -1103,8 +1027,8 @@ function tempShift(num)
 	local theLat=navMaths.getPixelsFromLat(tonumber(thePanel[2][11][1].text.."."..thePanel[2][11][2].text..thePanel[2][11][3].text..thePanel[2][11][4].text..thePanel[2][11][5].text))-MD.mapH/2
 	local theLong=navMaths.getPixelsFromLong(tonumber(thePanel[3][11][1].text.."."..thePanel[3][11][2].text..thePanel[3][11][3].text..thePanel[3][11][4].text..thePanel[3][11][5].text))-MD.mapW/2
 	if (currentType=="wp") then--or (currentType=="mk") then
-		waypGroup[num][1][1].x=theLong
-		waypGroup[num][1][1].y=theLat
+		waypGroup[num][2][1].x=theLong
+		waypGroup[num][2][1].y=theLat
 	elseif (currentType=="rt") then
 		routeGroup[3][num][1].x=theLong
 		routeGroup[3][num][1].y=theLat
@@ -1122,9 +1046,9 @@ function unDoWP()
 	if (currentType=="wp") then
 		oldLat=navMaths.getPixelsFromLat(myWayPoints[currentWP][3])-MD.mapH/2
 		oldLong=navMaths.getPixelsFromLong(myWayPoints[currentWP][4])-MD.mapW/2
-		waypGroup[currentWP][1][1].x=oldLong
-		waypGroup[currentWP][1][1].y=oldLat
-		-- waypGroup[currentWP][1].alpha=0
+		waypGroup[currentWP][2][1].x=oldLong
+		waypGroup[currentWP][2][1].y=oldLat
+		waypGroup[currentWP][1].alpha=0
 	elseif (currentType=="mk") then
 		-- oldLat=navMaths.getPixelsFromLat(markTable[currentWP][1])-MD.mapH/2 -- CHECK FOR ERROR HERE - currentWP
 		-- oldLong=navMaths.getPixelsFromLong(markTable[currentWP][2])-MD.mapW/2
@@ -1144,7 +1068,7 @@ end
 
 function shiftWayPoint(num,lat,long)
 --called from updateWP
-	local theDate=os.date("%d%m%Y" )
+
 	local theLat=navMaths.getPixelsFromLat(lat)-MD.mapH/2
 	local theLong=navMaths.getPixelsFromLong(long)-MD.mapW/2
 	local oldLat,oldLong
@@ -1177,12 +1101,42 @@ function shiftWayPoint(num,lat,long)
 		-- end
 		-- waypGroup[num].x=waypGroup[num].x-shiftX
 		-- waypGroup[num].y=waypGroup[num].y-shiftY
-		-- waypGroup[num][1].alpha=0
+		waypGroup[num][1].alpha=0
 	elseif (currentType=="goto") then
 		gotoGroup[1].x=theLong
 		gotoGroup[1].y=theLat
 		gotoGroup[2].x=theLong
 		gotoGroup[2].y=theLat
+	end
+end
+
+function loadWayPoints()
+	--called from switchMark
+	emptyGroup(waypGroup)
+	myWayPoints=IO.loadFile("myWayPoints.txt")
+	MD.topLat=tonumber(chartInfo[currentChart][7])
+	MD.topLong=tonumber(chartInfo[currentChart][8])
+	MD.bottomLat=tonumber(chartInfo[currentChart][9])
+	MD.bottomLong=tonumber(chartInfo[currentChart][10])
+	wpLoaded=0
+	if (myWayPoints~=nil) and (string.len(myWayPoints[1])>4) then
+		for i=1,#myWayPoints do --error here
+			if (myWayPoints[i]~="") then 
+				local fileTable = myWayPoints[i]:split(",")
+				myWayPoints[i]=fileTable
+				MD.markLat=(tonumber(fileTable[3]))
+				MD.markLong=(tonumber(fileTable[4]))
+				if (MD.markLat<MD.topLat) and (MD.markLat>MD.bottomLat) and (MD.markLong>MD.topLong) and (MD.markLong<MD.bottomLong) then
+					startWayPoint(0,true,fileTable[2],i,"wp")
+					wpLoaded=wpLoaded+1
+				else
+					startWayPoint(0,true,fileTable[2],i,"wp")
+				end
+			end
+			if wpLoaded > 0 then viewButtons[2]=true end
+		end
+	else
+		myWayPoints={}
 	end
 end
 
@@ -1195,10 +1149,10 @@ function showMarkPanel()
 	clearPanel()
 	local leftPos=leftEdge+140
 	if (ort=="H") then leftPos=leftEdge+10 end
-	if (trackingOn) then
-		thePanel=ui.makeNewPanel("waypoint options",leftPos,300,200,180,false,"bluebutton","Enter WP\nusing pickerwheel",enterWPw,"greenbutton","Make WP\nat current loc",makeWPw,"redbutton","Delete\nall waypoints",deleteAllWP,"greybutton","Cancel",clearPanel)
+	if (waypGroup.numChildren>0) then
+		thePanel=ui.makeNewPanel("waypoint options",leftPos,300,200,180,false,"bluebutton","Enter WP\nusing pickerwheel",enterWPw,"redbutton","Delete\nall waypoints",deleteAllWP,"mauvebutton","Import WP\nDISABLED",clearPanel,"greybutton","Cancel",clearPanel)
 	else
-		thePanel=ui.makeNewPanel("waypoint options",leftPos,300,200,180,false,"bluebutton","Enter WP\nusing pickerwheel",enterWPw,"redbutton","Delete\nall waypoints",deleteAllWP,"greybutton","Cancel",clearPanel)
+		thePanel=ui.makeNewPanel("waypoint options",leftPos,300,200,180,false,"bluebutton","Enter WP\nusing pickerwheel",enterWPw,"redbutton","Delete\nall waypoints",deleteAllWP,"mauvebutton","Import WP\nDISABLED",clearPanel,"greybutton","Cancel",clearPanel)
 	end
 	screenGroup:insert(thePanel)
 	MD.hTime=timer.performWithDelay( 5000,function() clearPanel() end)
@@ -1209,9 +1163,9 @@ function showRoutePanel() --checkRoutes has to go somewhere
 	local leftPos=leftEdge+140
 	if (ort=="H") then leftPos=leftEdge+10 end
 	if (routeGroup.numChildren>0) then
-		thePanel=ui.makeNewPanel("route options",leftPos,300,200,20,false,"bluebutton","Route List\nsaved routes",setRouteLoadPanel,"greybutton","cancel",clearPanel)
+		thePanel=ui.makeNewPanel("route options",leftPos,300,200,20,false,"bluebutton","Route List\nsaved routes",setRouteLoadPanel,"mauvebutton","Import Route\nDISABLED",clearPanel,"mauvebutton","Share Route\nDISABLED",clearPanel,"greybutton","cancel",clearPanel)
 	else
-		thePanel=ui.makeNewPanel("route options",leftPos,300,200,20,false,"bluebutton","Route List\nsaved routes",setRouteLoadPanel,"greybutton","cancel",clearPanel)
+		thePanel=ui.makeNewPanel("route options",leftPos,300,200,20,false,"bluebutton","Route List\nsaved routes",setRouteLoadPanel,"mauvebutton","Import Route\nDISABLED",clearPanel,"greybutton","cancel",clearPanel)
 	end
 	screenGroup:insert(thePanel)
 	MD.hTime=timer.performWithDelay( 3000,function() clearPanel() end)
@@ -1243,9 +1197,9 @@ function showTrackPanel() --checkRoutes has to go somewhere
 	local leftPos=leftEdge+140
 	if (ort=="H") then leftPos=leftEdge+10 end
 	if (trackingOn) then
-		thePanel=ui.makeNewPanel("trackingoff",leftPos,300,200,20,false,"redbutton","Tracking Off",trackToggle,"bluebutton","Show/Hide Track",switchTrackView,"greybutton","cancel",clearPanel)
+		thePanel=ui.makeNewPanel("trackingoff",800,300,200,260,false,"redbutton","Tracking Off",trackToggle,"greybutton","cancel",clearPanel)
 	else
-		thePanel=ui.makeNewPanel("track options",leftPos,300,200,20,false,"greenbutton","Tracking On",trackToggle,"greybutton","cancel",clearPanel)
+		thePanel=ui.makeNewPanel("track options",leftPos,300,200,20,false,"greenbutton","Tracking On",trackToggle,"bluebutton","Show/Hide Track",switchTrackView,"greybutton","cancel",clearPanel)
 	end
 	screenGroup:insert(thePanel)
 	MD.hTime=timer.performWithDelay( 5000,function() clearPanel() end)
@@ -1274,13 +1228,15 @@ function showToolsPanel()
 	local leftPos=leftEdge+140
 	if (ort=="H") then leftPos=leftEdge+10 end
 	if (IO.checkFile("chart"..chartNum.."_notes.txt")) then
-		thePanel=ui.makeMiniPanel(leftPos,300,150,150,"night","",switchDay,"locked","",switchLock,"capbutton","",capScreen,"writenote","",notes.makeNotes,"pref","",makePref,"note","",notes.readNotes,"loc","",locPref)
-	elseif (isPhone) then
-		thePanel=ui.makeMiniPanel(leftPos,200,150,150,"night","",switchDay,"locked","",switchLock,"capbutton","",capScreen,"pref","",makePref,"info","",showInfoPanel,"help","",showHelpPanel,"loc","",locPref)
+		thePanel=ui.makeMiniPanel(leftPos,300,150,150,"night","",switchDay,"locked","",switchLock,"capbutton","",capScreen,"writenote","",notes.makeNotes,"pref","",makePref,"note","",notes.readNotes)
 	else	
-		thePanel=ui.makeMiniPanel(leftPos,300,150,150,"night","",switchDay,"locked","",switchLock,"capbutton","",capScreen,"writenote","",notes.makeNotes,"pref","",makePref,"loc","",locPref)
+		thePanel=ui.makeMiniPanel(leftPos,300,150,150,"night","",switchDay,"locked","",switchLock,"capbutton","",capScreen,"writenote","",notes.makeNotes,"pref","",makePref)
 	end
-	
+	if (isBasic) then
+		thePanel=ui.makeMiniPanel(leftPos,300,150,150,"night","",switchDay,"locked","",switchLock,"capbutton","",capScreen)
+	elseif (isPhone) then
+		thePanel=ui.makeMiniPanel(leftPos,300,150,150,"night","",switchDay,"locked","",switchLock,"capbutton","",capScreen,"pref","",makePref,"info","",showInfoPanel,"help","",showHelpPanel)
+	end
 	if (isPhone) then 
 		thePanel.xScale=1.8
 		thePanel.yScale=1.8
@@ -1330,31 +1286,13 @@ end
 
 function makePref()
 	clearPanel()
-	prefText={"Switch menu style (vertical to horizontal or viceversa)","Go to start screen","Delete route files - only use if there is an error loading files","Delete data files (only use if instructed by support staff)","Delete all system files (only use if instructed by support staff)","Send system info (only use if instructed by support staff)"}
-	if isPhone then prefText={"Go to start screen","Delete route files - only use if there is an error loading files","Delete data files (only use if instructed by support staff)","Delete all system files (only use if instructed by support staff)","Send system info (only use if instructed by support staff)"} end
-	prefButtons={{"bluebutton","Switch Menu",switchMenu},{"greenbutton","Go to Start",goStart},{"redbutton","Delete\nroute files",IO.deleteRouteFiles},{"redbutton","Delete\ndata file",IO.deleteDataFile},{"redbutton","Delete\nall system files ",IO.deleteAppFiles},{"bluebutton","Send Info",IO.sendInfo}}
-	if isPhone then prefButtons={{"greenbutton","Go to Start",goStart},{"redbutton","Delete\nroute files",IO.deleteRouteFiles},{"redbutton","Delete\ndata file",IO.deleteDataFile},{"redbutton","Delete\nall system files ",IO.deleteAppFiles},{"bluebutton","Send Info",IO.sendInfo}} end
-	thePanel=ui.makePrefPanel(120,120,800,600,10,10,prefText,prefButtons)
-	screenGroup:insert(thePanel)
-end
-
-function locPref()
-	clearPanel()
-	locText={"Set location update to 1m","Set location update to 5m","Set location update to 10m  (default)","Set location update to 30m"}
-	locButtons={{"bluebutton","1m",function() changeLocUpdate(1) end},{"bluebutton","5m",function() changeLocUpdate(5) end},{"bluebutton","10m",function() changeLocUpdate(10) end},{"bluebutton","30m",function() changeLocUpdate(30) end}}
-	thePanel=ui.makePrefPanel(120,120,800,600,10,10,locText,locButtons,"Choose update rate for location")
-	screenGroup:insert(thePanel)
-end
-
-function changeLocUpdate(x)
-	locUpdate=x
-	system.setLocationThreshold( locUpdate )
-	clearPanel()
+	prefText={"Switch menu style (vertical to horizontal or viceversa)","Go to start screen","Delete route files - only use if there is an error loading files","Delete data files (only use if instructed by support staff)","Delete all system files (only use if instructed by support staff)"}
+	prefButtons={{"bluebutton","Switch Menu",switchMenu},{"greenbutton","Go to Start",goStart},{"redbutton","Delete\nroute files",IO.deleteRouteFiles},{"redbutton","Delete\ndata file",IO.deleteDataFile},{"redbutton","Delete\nall system files ",IO.deleteAppFiles}}
+	prefs=ui.makePrefPanel(120,100,800,600,10,10,prefText,prefButtons)
+	screenGroup:insert(prefs)
 end
 
 function goStart()
-	composer.removeScene("loadchart")
-	chartPointer=1
 	composer.gotoScene(splashPage)
 end
 
@@ -1416,9 +1354,9 @@ function showViewPanel()
 		local leftPos=leftEdge+140
 		if (ort=="H") then leftPos=leftEdge+10 end
 
-		panelButtons={true,true,true,doTide,doLight,doNM}
+		panelButtons={true,true,true,doTide,doharbour,doLight,false,doSC}
 
-		thePanel=ui.makeMiniPanel(leftPos,200,150,150,"showsub","",switchSub,"showmark","",switchMark,"showroute","",switchRoute,"showtides","",switchTides,"showlights","",switchLights,"shownm","",switchNM)
+		thePanel=ui.makeMiniPanel(leftPos,200,150,150,"showsub","",switchSub,"showmark","",switchMark,"showroute","",switchRoute,"showtides","",switchTides,"showharbour","",switchHarbours,"showlights","",switchLights,"shownm","",switchNM,"showsc","",switchSC)
 		
 		-- if (doTrack) then
 			-- if doHarbour then
@@ -1426,6 +1364,8 @@ function showViewPanel()
 			-- else
 				-- thePanel=ui.makeMiniPanel(leftPos,200,150,150,"showsub","",switchSub,"showmark","",switchMark,"showroute","",switchRoute,"showtides","",switchTides,"showsc","",switchSC"showlights","",switchLights,"shownm","",switchNM,"showtrack","",switchTrackView)
 			-- end
+		-- elseif (isBasic) then
+			-- thePanel=ui.makeMiniPanel(leftPos,200,150,150,"showsub","",switchSub,"showmark","",switchMark,"showroute","",switchRoute)
 		-- else
 			-- thePanel=ui.makeMiniPanel(leftPos,200,150,150,"showsub","",switchSub,"showmark","",switchMark,"showroute","",switchRoute,"showtides","",switchTides,"showharbour","",switchHarbours,"showlights","",switchLights,"shownm","",switchNM,"showsc","",switchSC)
 		-- end	
@@ -1460,7 +1400,7 @@ function clearPanel()
 	isMoveGT=false
 	thePanel=nil
 	wpInfoGroup.alpha=0
-	-- if (currentWP~=nil) and (waypGroup[currentWP]~=nil) then waypGroup[currentWP][1].alpha=0 end
+	if (currentWP~=nil) and (waypGroup[currentWP]~=nil) then waypGroup[currentWP][1].alpha=0 end
 	if (blinkingCircle~=nil) then cancelTrans() end
 	return true
 end
@@ -1506,39 +1446,6 @@ function string:split( inSplitPattern, outResults )
    end
    table.insert( outResults, string.sub( self, theStart ) )
    return outResults
-end
-
-function loadWayPoints()
-	--called from switchMark,switchwaypoint
-	emptyGroup(waypGroup)
-	myWayPoints=IO.loadFile("myWayPoints.txt")
-	MD.topLat=tonumber(chartInfo[currentChart][7])
-	MD.topLong=tonumber(chartInfo[currentChart][8])
-	MD.bottomLat=tonumber(chartInfo[currentChart][9])
-	MD.bottomLong=tonumber(chartInfo[currentChart][10])
-	wpLoaded=0
-	if (myWayPoints~=nil) and (string.len(myWayPoints[1])>4) then
-		for i=1,#myWayPoints do --error here
-			if (myWayPoints[i]~="") then 
-				local fileTable = myWayPoints[i]:split(",")
-				myWayPoints[i]=fileTable
-				MD.markLat=(tonumber(fileTable[3]))
-				MD.markLong=(tonumber(fileTable[4]))
-				if (MD.markLat<MD.topLat) and (MD.markLat>MD.bottomLat) and (MD.markLong>MD.topLong) and (MD.markLong<MD.bottomLong) then
-					startWayPoint(0,true,fileTable[2],i,"wp")
-					wpLoaded=wpLoaded+1
-				else
-					startWayPoint(0,true,fileTable[2],i,"wp")
-				end
-			end
-			if wpLoaded > 0 then 
-				viewButtons[2]=true 
-				waypGroup.alpha=1
-			end
-		end
-	else
-		myWayPoints={}
-	end
 end
 
 function loadHarbours()
@@ -1591,7 +1498,7 @@ function loadSailingClubs()
 			if (MD.markLat<MD.topLat) and (MD.markLat>MD.bottomLat) and (MD.markLong>MD.topLong) and (MD.markLong<MD.bottomLong) then
 				scLoaded=scLoaded+1
 				startWayPoint(scLoaded,true,fileTable[3],scLoaded,"sc",i)
-				viewButtons[8]=true
+				viewButtons[5]=true
 				if (scView==false) then 
 					scGroup.alpha=0
 					viewButtons[8]=false
@@ -1607,8 +1514,11 @@ function loadTidePorts()
 	tdNameTable={}
 	emptyGroup(tideGroup)
 	
-	myTidePorts=IO.loadFile("tides/tideports_"..region..".csv",system.ResourceDirectory)
-
+	-- if isDemo then 
+		-- myTidePorts=IO.loadFile("tides/tideports_"..region.."free.csv",system.DocumentsDirectory)
+	-- else
+		myTidePorts=IO.loadFile("tides/tideports_"..region..".csv",system.DocumentsDirectory)
+	-- end
 	doMessage(#myTidePorts,"",2)
 	MD.topLat=tonumber(chartInfo[chartPointer][7])
 	MD.topLong=tonumber(chartInfo[chartPointer][8])
@@ -1621,7 +1531,7 @@ function loadTidePorts()
 				local fileTable = myTidePorts[i]:split(",")
 				MD.markLat=(tonumber(fileTable[3]))
 				MD.markLong=(tonumber(fileTable[4]))
-
+				print(MD.markLat,MD.markLong)
 				local tideName=(fileTable[2])
 				local tideSite=(fileTable[5])
 				local tideSun=(fileTable[6])
@@ -1698,8 +1608,7 @@ function nmListener(self,touch)
 end
 
 function loadLights(LorM)
-	myLights=IO.loadFile("data/lights_"..region..".txt",system.DocumentsDirectory)
-	--myLights=IO.loadFile("data/"..LorM.."_"..region..".txt",system.DocumentsDirectory)
+	myLights=IO.loadFile("lights_"..region..".txt",system.ResourceDirectory)
 	lightTable={}
 	lLoaded=0
 	MD.topLat=tonumber(chartInfo[chartPointer][7])
@@ -1718,7 +1627,7 @@ function loadLights(LorM)
 				if (markLat<MD.topLat) and (markLat>MD.bottomLat) and (markLong>MD.topLong) and (markLong<MD.bottomLong) then
 					lLoaded=lLoaded+1
 					lightGroup.alpha=1
-					viewButtons[5]=true
+					viewButtons[6]=true
 					local lInfo=fileTable[4].."	"..fileTable[5].." "..fileTable[6].." "..fileTable[7].." "..fileTable[8].." "..fileTable[9]
 					showLight(lightName,lightColour,markLat,markLong,lInfo,"lights")
 				end
@@ -1729,6 +1638,7 @@ end
 
 function showLight(lightName,lightColour,markLat,markLong,lInfo,LorM)
 
+	isLights=true
 	newLight=display.newImageRect("images/"..lightColour..LorM..".png",40/MD.multiplier,40/MD.multiplier)
 	newLight.name=lightName
 	newLight.touch=lightListener
@@ -1739,10 +1649,10 @@ function showLight(lightName,lightColour,markLat,markLong,lInfo,LorM)
 	newLight.x,newLight.y=theLong,theLat
 	newLight.alpha=1
 	lightGroup:insert(newLight)
-	-- if (lightView==false) then 
-		-- lightGroup.alpha=0
-		-- viewButtons[5]=false
-	-- end
+	if (lightView==false) then 
+		lightGroup.alpha=0
+		viewButtons[6]=false
+	end
 end
 
 function lightListener(self,touch)
@@ -1766,23 +1676,17 @@ end
 
 function loadTracks()
 	myTracks=IO.loadFile("myTracks.txt")
-	if myTracks~=nil then
-		trackGroup.alpha=1
-		for i=1,#myTracks do
-			if (myTracks[i]~="") then 
-				local fileTable = myTracks[i]:split(",")
-				MD.markLat=(tonumber(fileTable[1]))
-				MD.markLong=(tonumber(fileTable[2]))
-				if (MD.markLat<MD.topLat) and (MD.markLat>MD.bottomLat) and (MD.markLong>MD.topLong) and (MD.markLong<MD.bottomLong) then
-					local trackPoint=display.newImageRect(trackGroup,"images/marks/tr.png",10/MD.multiplier,10/MD.multiplier)
-					local theLat=navMaths.getPixelsFromLat(MD.markLat)-MD.mapH/2
-					local theLong=navMaths.getPixelsFromLong(MD.markLong)-MD.mapW/2
-					trackPoint.x=theLong
-					trackPoint.y=theLat
-					trackPoint.anchorX=0.5
-					trackPoint.anchorY=0.5
-				end
-			end
+	trackGroup.alpha=1
+	for i=1,#myTracks do
+		if (myTracks[i]~="") then 
+			local fileTable = myTracks[i]:split(",")
+			MD.markLat=(tonumber(fileTable[1]))
+			MD.markLong=(tonumber(fileTable[2]))
+			-- if (MD.markLat<MD.topLat) and (MD.markLat>MD.bottomLat) and (MD.markLong>MD.topLong) and (MD.markLong<MD.bottomLong) then
+				startWayPoint(0,true,fileTable[3],i,"tr")
+			-- else
+
+			-- end
 		end
 	end
 end
@@ -1817,51 +1721,51 @@ function switchRoute(x)
 		return true
 end
 
-function switchTides()
+function switchTides(x)
 	clearPanel()
 	if (tideGroup.alpha==1) then
 		tideGroup.alpha=0
-		viewButtons[4]=false
+		viewButtons[x]=false
 		doMessage("Tide locations display OFF","",2,2000)
 		tideView=false
 	else
 		loadTidePorts()
 		tideGroup.alpha=1
-		viewButtons[4]=true
+		viewButtons[x]=true
 		doMessage("Tide locations display ON","",2,2000)
 		tideView=true
 	end
 	return true
 end
 
-function switchNM()
+function switchNM(x)
 	clearPanel()
 	if (nmGroup.alpha==1) then
 		nmGroup.alpha=0
-		viewButtons[7]=false
+		viewButtons[x]=false
 		doMessage("Notice to Mariners display OFF","",2,2000)
 		nmView=false
 	else
 		loadNM()
 		nmGroup.alpha=1
-		viewButtons[7]=true
+		viewButtons[x]=true
 		doMessage("Notice to Mariners display ON","",2,2000)
 		nmView=true
 	end
 	return true
 end
 
-function switchHarbours()
+function switchHarbours(x)
 	clearPanel()
 	if (harbourGroup.alpha==1) then
 		harbourGroup.alpha=0
-		viewButtons[5]=false
+		viewButtons[x]=false
 		doMessage("Harbours display OFF","",2,2000)
 		hbView=false
 	else
 		loadHarbours()
 		harbourGroup.alpha=1
-		viewButtons[5]=true
+		viewButtons[x]=true
 		doMessage("Harbours display ON","",2,2000)
 		hbView=true
 	end
@@ -1872,12 +1776,12 @@ function switchLights()
 	clearPanel()
 	if (lightGroup.alpha==1) then
 		lightGroup.alpha=0
-		viewButtons[5]=false
+		viewButtons[6]=false
 		doMessage("Lights display OFF","",2,2000)
 		lightView=false
 	else
 		if (chartScale<60000) then 
-			--loadLights("marks")
+			loadLights("marks")
 			loadLights("lights")
 			doMessage("Lights and Marks display ON","",2,2000)
 		else
@@ -1885,7 +1789,7 @@ function switchLights()
 			doMessage("Lights display ON","",2,2000)
 		end
 		lightGroup.alpha=1
-		viewButtons[5]=true
+		viewButtons[6]=true
 		
 		lightView=true
 	end
@@ -1915,18 +1819,21 @@ function switchMark(x)
 	if (waypGroup.alpha==1) then
 		waypGroup.alpha=0
 		viewButtons[x]=false
-		markOn=false
-		doMessage("Waypoints display OFF","",2,2000)
+		wpView=false
+		doMessage("Marks display OFF","",2,2000)
 	else
-		markOn=true
-		loadWayPoints()
+		-- if (waypGroup.numChildren==0) then
+			loadWayPoints()
 			-- viewButtons[x]=true
-		if (waypGroup.numChildren==0) then
-			doMessage("No waypoints to display","",2,2000)
-		else
-			doMessage("Waypoints display ON","",2,2000)
-		end
-	end	
+			
+		-- else
+			waypGroup.alpha=1
+			viewButtons[x]=true
+			doMessage("Marks display ON","",2,2000)
+			wpView=true
+		-- end
+	end
+	
 	return true
 end
 
@@ -1954,7 +1861,7 @@ function switchTrackView(x)
 		doMessage("Track display OFF","",2,2000)
 	else
 		trackGroup.alpha=1
-		if (trackingOn) then boatIcon.alpha=1 end
+		boatIcon.alpha=1
 		--viewButtons[x]=true
 		doMessage("Track display ON","",2,2000)
 	end
@@ -1967,68 +1874,47 @@ function doTrackOps()
 	screenGroup:insert(thePanel)
 end
 
-local function onCheckOK(event)
-	if "clicked" == event.action then
-			local i = event.index
-			if 1 == i then
-					-- Do nothing; dialog will simply dismiss
-			elseif 2 == i then
-					IO.saveMyTrack()
-			end
-	end
-end
-
 function trackToggle()
 	if (trackingOn) then
 		trackingOn=false
 		locGroup.alpha=0
-		boatIcon.alpha=0
 		Runtime:removeEventListener( "location", loc.locationHandler )
 		Runtime:removeEventListener( "enterFrame", loc.moveBoat )
-		
-		local alert = native.showAlert( "Send Email", "Would you like to email this track", 
-                                        { "No", "Yes" }, onCheckOK )
-				
-		emptyGroup(trackGroup)
 		system.setIdleTimer( true )
 	else
 		trackingOn=true
 		locGroup.alpha=1
 		trackGroup.alpha=1
 		boatIcon.alpha=1
-		avgSpeedList={0,0,0,0,0,0,0,0,0,0}
-		-- if environment == "simulator" then
-			-- startLat=50.75
-			-- startLong=-1.24
-			-- theLocationTimer=system.getTimer()+500
-			-- Runtime:addEventListener( "enterFrame", loc.moveBoat )
-		-- else
+		if environment == "simulator" then
+			startLat=currentLat
+			startLong=currentLong
+			theLocationTimer=system.getTimer()+500
+			Runtime:addEventListener( "enterFrame", loc.moveBoat )
+		else
 			theLocationTimer=system.getTimer()+5000
 			Runtime:addEventListener( "location", loc.locationHandler )
-			system.setLocationThreshold( locUpdate )
-		-- end
-		
+		end
 		system.setIdleTimer( false )
 	end
 	clearPanel()
 end
 
 function doMessage(text1,text2,size,timeOut)
-
 	local size=size or 2
 	clearMessage()
 	messageBox=display.newGroup()	
-	local behindRect = display.newRoundedRect(messageBox,190,40,644,110,20)
+	local behindRect = display.newRoundedRect(messageBox,190,80,644,110,20)
 	behindRect:setFillColor(0,0,.7,0.7)
 	behindRect.anchorX = 0
 	behindRect.anchorY = 0
-	local textSmall={parent=messageBox,text="",x=200,y=90,width=624,height=100,font=native.systemFont,fontSize=24,align="center"}
-	messageTextSmall = display.newText(textSmall)
-	messageTextSmall:setTextColor(1,1,1,1)
-	messageTextSmall.anchorX=0
-	messageTextSmall.anchorY=0
-	local textBig={parent=messageBox,text="",x=200,y=50,width=624,height=70,font=native.systemFont,fontSize=36,align="center"}
-	messageTextBig = display.newText(textBig)
+	local textOptions={parent=messageBox,text="",x=200,y=120,width=624,height=100,font=native.systemFont,fontSize=24,align="center"}
+	messageText = display.newText(textOptions)
+	messageText:setTextColor(1,1,1,1)
+	messageText.anchorX=0
+	messageText.anchorY=0
+	local textOptions={parent=messageBox,text="",x=200,y=80,width=624,height=70,font=native.systemFont,fontSize=36,align="center"}
+	messageTextBig = display.newText(textOptions)
 	messageTextBig:setTextColor(1,1,1,1)
 	messageTextBig.anchorX=0
 	messageTextBig.anchorY=0
@@ -2042,21 +1928,28 @@ function doMessage(text1,text2,size,timeOut)
 		--called from initChart and various functions
 		
 		if (size==1) then 
-			messageTextBig.text=text1
+			messageBox[3].text=text1
+			messageBox.y=200
 		end
 		if (size==2) then 
-			messageTextSmall.text=text1
-			messageTextSmall.y=60
+			messageBox[2].text=text1
+			messageBox.y=40
 		end
 		if (size==3) then 
-			messageTextSmall.text=text2
-			messageTextBig.text=text1
+			messageBox[2].text=text2
+			messageBox[3].text=text1
+			messageBox.y=40
 		end
 		mTimer=timer.performWithDelay(myTimeOut,clearMessage)
 	end
 end
 
 function clearMessage()
+	-- if (messageBox~=nil) then
+	-- if (messageBox[2]~=nil) then messageBox[2].text="" end
+	-- if (messageBox[3]~=nil) then messageBox[3].text="" end
+	-- messageBox.alpha=0
+	-- end
 	display.remove(messageBox)
 end
 
@@ -2097,7 +1990,7 @@ function captureScreen()
 	if (subGroup.alpha==1) then subGroup.alpha=0 end
 	local watermark=display.newImageRect("images/watermark.png",1024,768)
 	watermark.anchorX,watermark.anchorY=0,0
-	watermark.alpha=0.05
+	watermark.alpha=0.1
 	local screenCap = display.captureScreen( true )
 	watermark:removeSelf()
 	watermark=0
@@ -2382,10 +2275,8 @@ function getDMM()
 	else
 		local pickLat=pickerWheelLat:getValues()
 		local pickLong=pickerWheelLong:getValues()
-		print(pickLong[1].value)
 		if (tonumber(pickLat[1].value)<0) then theLatDir=-1 end
 		if (tonumber(pickLong[1].value)<0) then theLongDir=-1 end
-		if (tonumber(pickLong[1].value)==0) then theLongDir=-1 end
 
 		newLatD=math.abs(tonumber(pickLat[1].value))
 		newLatMM=tonumber(pickLat[2].value.."."..pickLat[3].value)
@@ -2403,13 +2294,14 @@ function getDMM()
 	MD.bottomLat=tonumber(chartInfo[chartPointer][9])
 	MD.bottomLong=tonumber(chartInfo[chartPointer][10])
 	clearPanel()
-
+	
+	startWayPoint()
 	if (MD.markLat<MD.topLat) and (MD.markLat>MD.bottomLat) and (MD.markLong>MD.topLong) and (MD.markLong<MD.bottomLong) then
 		doMessage("Placing waypoint","",2,2000)
-		startWayPoint()
 	else
-		doMessage("Cannot place waypoint outside this chart","",2,3000)
-	end	
+		doMessage("Placing waypoint outside this chart","",2,3000)
+	end
+	
 end
 
 function makeKeyboardPanel()
@@ -2579,12 +2471,6 @@ function print_r ( t )
     print()
 end
 
-function scene:destroy( event )
-
-    local sceneGroup = self.view
-	display.remove(sceneGroup)
-	
-end
 
 
 ---------------------------------------------------------------------------------
