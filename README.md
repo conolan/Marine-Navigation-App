@@ -6,7 +6,7 @@ I'm also a firm believer in hybrid or cross-platform coding, ever since I starte
 
 The app used several features: GPS Location, download from server, upload to server, image encryption.
 
-The app is based on British Admiralty (UKHO) Raster Charts. These are scans of the paper charts and each file comes with the latitude and longitude of the top right and bottom left corners. This demo versin uses two US charts which are free of copyright issues.
+The app is based on British Admiralty (UKHO) Raster Charts. These are scans of the paper charts and each file comes with the latitude and longitude of the top right and bottom left corners. This demo version uses two US charts which are free of copyright issues.
 
 In essence, I was creating a raster-based chart app but adding layers as vectors that added to the information and experience. A lot of chart apps are totally vector-based, which is efficient, but has issues around the look and more importantly what items (think rocks) are shown at what zoom levels. Raster charts have everything of relevance to safe boating on the chart. Vectors are seamless, but have to switch off small details at higher zoom levels and sometime there are consequences.
 
