@@ -20,17 +20,15 @@ picker = require( "datepicker" )
 dec = require ("decrypt_chart")
 reg = require ("reg")
 
-nmView=false
+isBasic=false
+nmView=true
 
-doTrack,doHarbour,doTide,doLight,doNM,doCS,doSC=true,false,true,true,false,false,false
+doTrack,doHarbour,doTide,doLight,doNM,doCS,doSC=false,false,false,true,true,false,false
 -- isDemo=true
-
-versionNum="1.1.3"
-productDisplayName="Solent and Approaches 2016"
-region="solent"
-topC=50.9228
-botC=50.5
-chartH=topC-botC
+productName="realchart_us"
+versionNum="1.0.8"
+productDisplayName="DEMO VERSION - Chesapeake"
+region="chesapeake"
 
 chartChooseFile="chartchooser_"..region
 
@@ -39,16 +37,13 @@ isGPS=true
 local platform=system.getInfo( "architectureInfo" )
 if (platform =="iPad2,1") or (platform =="iPad2,5")  or (platform =="iPad3,1")  or (platform =="iPad3,4")  or (platform =="iPad4,4") then isGPS=false end
 
-if not(Runtime:hasEventSource( "location" )) then alert = native.showAlert( "Location" , "Location events not supported on this platform", { "NEXT" } ) end
-
+theDate=os.date( "%Y".."-".."%m".."-".."%d" )
 theTime=os.time( t )
 splashPage="splash"
 
 environment = system.getInfo( "environment" )
 platformName=system.getInfo( "platformName" )
 isPhone=(system.getInfo("model")=="iPhone")
-xmlFile=region.."_rc"
-productName="realchart_solent_nav2016 "..platformName.." "..versionNum
 
 if platformName=="Android" then
 	local approximateDpi = system.getInfo("androidDisplayApproximateDpi")
@@ -56,12 +51,11 @@ if platformName=="Android" then
 	local heightInInches = display.pixelHeight / approximateDpi
 	local diagonal= math.sqrt((heightInInches*heightInInches)+(widthInInches*widthInInches))
 	if diagonal<7 then isPhone=true end
-	xmlFile=region.."_an"
 end
 
 local lfs = require( "lfs" )
-local folderList={"charts","tides","importedGPX","dataout","routes","info","help","data"}
-for i=1, 8 do
+local folderList={"tides","importedGPX","dataout","routes","info","help","data"}
+for i=1, 7 do
 	local docs_path = system.pathForFile( "", system.DocumentsDirectory )
 	local success = lfs.chdir( docs_path ) --returns 'true' on success
 	local new_folder_path
@@ -73,38 +67,35 @@ for i=1, 8 do
 	end
 end
 
-subF={"es","solent"}
-for i=1, #subF do
-	local docs_path = system.pathForFile( "charts", system.DocumentsDirectory )
-	local success = lfs.chdir( docs_path )
-	local new_folder_path
-	local dname = subF[i]
+-- subF={"ir","planning","sc","es","ww","ee","solent"}
+-- for i=1, 5 do
+	-- local docs_path = system.pathForFile( "charts", system.DocumentsDirectory )
+	-- local success = lfs.chdir( docs_path )
+	-- local new_folder_path
+	-- local dname = subF[i]
 
-	if ( success ) then
-		lfs.mkdir( dname )
-		new_folder_path = lfs.currentdir() .. "/" .. dname
-	end
-end
+	-- if ( success ) then
+		-- lfs.mkdir( dname )
+		-- new_folder_path = lfs.currentdir() .. "/" .. dname
+	-- end
+-- end
 
 local myInstallDate=IO.loadFile("appinstall.txt")
--- local myPurchase=IO.loadFile("chartpurchase.txt")	
+local myPurchase=IO.loadFile("chartpurchase.txt")	
 local errorInfo=IO.loadFile("data/error.txt")
 local regInfo=IO.loadFile("reg.txt")
 local ortInfo=IO.loadFile("ort.txt")
-locUpdate=0
-isSetOffset=false
 if errorInfo~=nil and errorInfo[1]==1 then errorReporting=true end
 if regInfo~=nil then isReg=true end
 ort="V"
 if ortInfo~=nil then ort=ortInfo[1] end
 if myPurchase~=nil then isDemo=false end
-
+xmlFile=region.."_rc"
 if isDemo then xmlFile=region.."_free" end
 -- composer.gotoScene( chartChooseFile)
 -- composer.gotoScene( "splashchecklat")
 
-if myInstallDate==nil or tonumber(myInstallDate[1])<1451606400 then
-	composer.gotoScene( "loaddata")
-else
 	composer.gotoScene( "splash")
-end
+
+
+

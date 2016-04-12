@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<chart>
+		<chartnum>12221</chartnum>
+		<filename>12221_1</filename>
+		<chartname>CHESAPEAKE BAY ENTRANCE</chartname>
+		<scale>800000</scale>
+		<subcharts>0,0</subcharts>
+		<masterchartnum>*</masterchartnum>
+		<top>37.4</top>
+		<left>-76.45</left>
+		<bottom>36.8166</bottom>
+		<right>-75.4833</right>
+		<width>4229</width>
+		<height>3183</height>
+		<updated>*</updated>
+		<folder>us</folder>
+		<spare2>-2.75</spare2>
+	</chart>
+	<chart>
+		<chartnum>12222</chartnum>
+		<filename>12222_1</filename>
+		<chartname>Chesapeake Bay Cape Charles to Norfolk</chartname>
+		<scale>40000</scale>
+		<subcharts>0,0</subcharts>
+		<masterchartnum>12221</masterchartnum>
+		<top>37.160556</top>
+		<left>-76.423389</left>
+		<bottom>36.837667</bottom>
+		<right>-75.890139</right>
+		<width>4453</width>
+		<height>3185</height>
+		<updated>*</updated>
+		<folder>us</folder>
+		<spare2>-1.59265655</spare2>
+	</chart>
+</document>
