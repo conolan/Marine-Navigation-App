@@ -83,33 +83,6 @@ function M.saveTrack(theTrack)
 	end
 end
 
-function M.saveMyTrack()
-	local filename = "myTracks.txt"
-	local path = system.pathForFile( filename, system.DocumentsDirectory )
-	local file = io.open( path, "r" )
-	if ( file ) then
-		io.close( file )
-		local newFileName="track_"..os.date( "%Y".."%m".."%d".."%H".."%M".."%S" )..".txt"
-		renameFile(newFileName)
-		IO.emailTrack(newFileName)
-		return true
-	else
-		print( "Error: could not read ", filename, "." )
-		return false
-	end
-end
-
-function renameFile(filename)
-
-	local result, reason = os.rename(system.pathForFile( "myTracks.txt", system.DocumentsDirectory  ),system.pathForFile( filename, system.DocumentsDirectory  ))
-	if result then
-		print( "File renamed" )
-	else
-		print( "File not renamed",filename, reason )  
-		native.showAlert( "ERROR", "File not renamed" ,{ "OK" })
-	end
-end
-
 function M.saveWayPoints()
 	local filename = "myWayPoints.txt"
 	local thePoints=""
@@ -327,7 +300,9 @@ function M.shareRTgpx()
 			gpx=gpx..newWP
 		end
 		gpx=gpx.."</rte></gpx>"
-
+		
+		--M.saveOverFile("dataout/"..whichRoute..".gpx",gpx)
+		--M.sendEmail("","Waypoints file from ChartsNav","Files from Chartsnav","waypoints.gpx","txt","No email options. File not sent")
 		newHex=M.makeHexCode()
 		
 		gpx = urlEncode(gpx)
@@ -359,12 +334,15 @@ function M.shareTrack()
 	
 end
 
-function M.emailTrack(trackName)
-
-	--clearPanel()
-	local path = system.pathForFile( trackName, system.DocumentsDirectory )
-	IO.sendEmail("","Tracks file from Realcharts "..system.getInfo( "model" ),"Tracks from Realcharts",trackName,"txt","No email options. File not sent")
-	--newHex=M.makeHexCode()	
+function M.emailTrack()
+	local myTracks=M.loadFile("myTracks.txt")
+	local trackData=""
+	for i=1,#myTracks do
+		trackData=trackData..myTracks[i].."\n"
+	end
+	clearPanel()
+	M.sendEmail("","Tracks file from ChartsNav","Tracks from Chartsnav","myTracks.txt","txt","No email options. File not sent")
+	newHex=M.makeHexCode()	
 	-- Access Google over SSL:
 	--network.request( "http://www.realcharts.net/dataops/placeTrack.php?code="..newHex.."&wpinfo="..trackData, "GET", networkListener )
 	--doMessage("This is your unique code for downloading your track file\n\n"..newHex.."\n\nYou can access this at www.chartsnav.com/gettrack")
@@ -609,9 +587,8 @@ end
 
 
 function M.sendEmail(fTo,fSub,message,fFile,fType,errorMessage)
-
 	local options
-	--if ( native.canShowPopup( "mail" ) ) then
+	if ( native.canShowPopup( "mail" ) ) then
 		if (fFile~="") then
 			options =
 			{	
@@ -628,15 +605,10 @@ function M.sendEmail(fTo,fSub,message,fFile,fType,errorMessage)
 			body = message,
 			}
 		end
-		local result = native.showPopup("mail", options)
-	
-	if not result then
-		print( "Mail Not supported/setup on this device" )
-		native.showAlert( "Alert!",
-		"Mail not supported/setup on this device.", { "OK" }
-	);
+		native.showPopup("mail", options)
+	else
+		doMessage(errorMessage,"",1)
 	end
-
 end
  
 function M.deleteRouteFiles()
@@ -678,25 +650,6 @@ end
 function M.deleteWPFile()
 	local filename = "myWayPoints.txt"
 	local results, reason = os.remove( system.pathForFile( filename, system.DocumentsDirectory  ) )
-end
-
-function M.sendInfo()
-	--native.showAlert( "Sending", "email will send info", {"OK"} )
-	myInfo=system.getInfo( "appVersionString" ).."\n"..system.getInfo( "architectureInfo" ).."\n"..system.getInfo( "model" )
-	
-	local function locationHandler(event)
-		if event.errorCode then
-			native.showAlert( "GPS Location Error", event.errorMessage, {"OK"} )
-			myInfo=myInfo.."\nGPS Location Error "..event.errorCode.." "..event.errorMessage
-		else
-			myInfo=myInfo.."\n"..event.latitude.." "..event.longitude
-		end
-		IO.sendEmail("info@realcharts.net","Error",myInfo,"","","Email not available")
-		Runtime:removeEventListener( "location", locationHandler )
-	end
-	
-	Runtime:addEventListener( "location", locationHandler )
-	
 end
 
 return M

@@ -7,7 +7,7 @@
 
 local aux = {}
 
-tidePlace=IO.loadFile("downloadtide_"..region..".txt",system.ResourceDirectory)
+--tidePlace=IO.loadFile("downloadtide_"..region..".txt",system.ResourceDirectory)
 chartPlace=IO.loadFile("downloadchart_"..region..".txt",system.ResourceDirectory)
 if platformName=="Android" then chartPlace=IO.loadFile("downloadchart_"..region.."android.txt",system.ResourceDirectory) end
 dataPlace=IO.loadFile("downloaddata_"..region..".txt",system.ResourceDirectory)
@@ -17,7 +17,7 @@ dataPlace=IO.loadFile("downloaddata_"..region..".txt",system.ResourceDirectory)
 
 local tideFile = region.."_tides.zip"
 local tideFilename = region.."/tides/"..region.."_tides.zip"
-local tideURL = tidePlace[1]
+--local tideURL = tidePlace[1]
 
 local dataFile = region.."_data.zip"
 local dataFilename = region.."/data/"..region.."_data.zip"

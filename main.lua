@@ -28,6 +28,9 @@ productName="realchart_us"
 versionNum="1.0.8"
 productDisplayName="DEMO VERSION - Chesapeake"
 region="chesapeake"
+topC=50.9228
+botC=50.5
+chartH=topC-botC
 
 chartChooseFile="chartchooser_"..region
 
@@ -66,8 +69,7 @@ for i=1, 7 do
 	end
 end
 
-local myInstallDate=IO.loadFile("appinstall.txt")
-local myPurchase=IO.loadFile("chartpurchase.txt")	
+local myInstallDate=IO.loadFile("appinstall.txt")	
 local errorInfo=IO.loadFile("data/error.txt")
 local regInfo=IO.loadFile("reg.txt")
 local ortInfo=IO.loadFile("ort.txt")
@@ -75,11 +77,9 @@ if errorInfo~=nil and errorInfo[1]==1 then errorReporting=true end
 if regInfo~=nil then isReg=true end
 ort="V"
 if ortInfo~=nil then ort=ortInfo[1] end
-if myPurchase~=nil then isDemo=false end
 xmlFile=region.."_rc"
 
-
-	composer.gotoScene( "splash")
+composer.gotoScene( "splash")
 
 
 

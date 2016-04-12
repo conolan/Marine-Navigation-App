@@ -640,7 +640,7 @@ function ui.makeReadInfoPanel(x,y,w,h,offX,offY,theText,theImage,theFolder,b1Img
 	local textheight=h-40
 	thePanel:insert(panelRect)
 	local theFile=theFolder.."/"..theImage..".jpg"
-	helpImage=display.newImageRect(theFile,system.DocumentsDirectory,w,h)
+	helpImage=display.newImageRect(theFile,system.ResourceDirectory,w,h)
 	helpImage.x,helpImage.y=512,384
 	thePanel:insert(helpImage)
 	

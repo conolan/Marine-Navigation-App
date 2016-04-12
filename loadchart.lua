@@ -1251,8 +1251,8 @@ end
 
 function showInfoPanel()
 	clearPanel()
-	infoList=IO.loadFile("info/info.txt",system.DocumentsDirectory)
-	infoPos=IO.loadFile("info/pos.txt",system.DocumentsDirectory)
+	infoList=IO.loadFile("info/info.txt",system.ResourceDirectory)
+	infoPos=IO.loadFile("info/pos.txt",system.ResourceDirectory)
 	infoPos=infoPos[1]:split(",")
 	if isReg then
 		nextInfo()
@@ -1315,9 +1315,9 @@ end
 
 function showHelpPanel()
 	clearPanel()
-	infoPos=IO.loadFile("help/pos.txt",system.DocumentsDirectory)
+	infoPos=IO.loadFile("help/pos.txt",system.ResourceDirectory)
 	infoPos=infoPos[1]:split(",")
-	helpList=IO.loadFile("help/help.txt",system.DocumentsDirectory)
+	helpList=IO.loadFile("help/help.txt",system.ResourceDirectory)
 	local theText=string.gsub(helpList[1],"~","\n")
 	thePanel=ui.makeReadInfoPanel(0,0,1024,768,tonumber(infoPos[1]),tonumber(infoPos[2]),theText,"help1","help","bluebutton","Next",nextHelp,"greybutton","Done",clearPanel)
 	screenGroup:insert(thePanel)
